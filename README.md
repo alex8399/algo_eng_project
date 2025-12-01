@@ -1,6 +1,6 @@
-### Algorithms Engineering Project
+# Algorithms Engineering Project
 
-## Development
+### Development
 - Use `wsl`.
 ```bash
 wsl
