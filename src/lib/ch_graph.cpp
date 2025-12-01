@@ -8,7 +8,7 @@ void CHGraph::preproc_graph_top_down(const CHGraph::Graph &graph, CHGraph::Prepr
 {
 }
 
-void CHGraph::calculate_route(const CHGraph::Graph &graph, const CHGraph::PreprocGraph &preproc_graph,
-                              const CHGraph::Destination &destination, CHGraph::Route &route)
+void CHGraph::query_route(const CHGraph::Graph &graph, const CHGraph::PreprocGraph &preproc_graph,
+                          const CHGraph::Destination &destination, CHGraph::Route &route)
 {
 }

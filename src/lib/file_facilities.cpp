@@ -4,7 +4,7 @@ void FileFacilities::read_graph(const std::string graph_file, CHGraph::Graph gra
 {
 }
 
-void FileFacilities::read_routes(const std::string destinations_file, std::vector<CHGraph::Destination> destinations)
+void FileFacilities::read_destinations(const std::string destinations_file, std::vector<CHGraph::Destination> destinations)
 {
 }
 

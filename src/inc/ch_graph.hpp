@@ -24,8 +24,8 @@ namespace CHGraph
 
     void preproc_graph_top_down(const Graph &graph, PreprocGraph &preproc_graph);
 
-    void calculate_route(const Graph &graph, const PreprocGraph &preproc_graph,
-                         const Destination &destination, Route &route);
+    void query_route(const Graph &graph, const PreprocGraph &preproc_graph,
+                     const Destination &destination, Route &route);
 }
 
 #endif 

@@ -23,7 +23,7 @@ void Experiment::run(const std::string &graph_file, const std::string &destinati
     std::vector<CHGraph::Destination> destinations;
 
     FileFacilities::read_graph(graph_file, graph);
-    FileFacilities::read_routes(destinations_file, destinations);
+    FileFacilities::read_destinations(destinations_file, destinations);
 
     CHGraph::PreprocGraph bottom_up_graph, top_down_graph;
     CHGraph::Route route;
@@ -39,8 +39,8 @@ void Experiment::run(const std::string &graph_file, const std::string &destinati
     for (int ind = 0; ind < destinations.size(); ++ind)
     {
         MEASURE_TIME(
-            CHGraph::calculate_route(graph, bottom_up_graph, destinations[ind], route),
-            measurement.data["calculate_route_bottom_up_" + std::to_string(ind)],
+            CHGraph::query_route(graph, bottom_up_graph, destinations[ind], route),
+            measurement.data["query_route_bottom_up_" + std::to_string(ind)],
             timer,
             run_number);
     }
@@ -54,8 +54,8 @@ void Experiment::run(const std::string &graph_file, const std::string &destinati
     for (int ind = 0; ind < destinations.size(); ++ind)
     {
         MEASURE_TIME(
-            CHGraph::calculate_route(graph, top_down_graph, destinations[ind], route),
-            measurement.data["calculate_route_top_down_" + std::to_string(ind)],
+            CHGraph::query_route(graph, top_down_graph, destinations[ind], route),
+            measurement.data["query_route_top_down_" + std::to_string(ind)],
             timer,
             run_number);
     }
