@@ -15,15 +15,12 @@ OBJS = \
 clean:
 	rm -rf ${BLD_DIR}/*.o ${TARGET_DIR}/*.exe
 
-${BLD_DIR}:
-	mkdir -p ${BLD_DIR}
-
 build: ${TARGET_DIR}/${TARGET}
 
 ${TARGET_DIR}/${TARGET}: ${OBJS}
 	${CC} ${CFLAGS} $^ -o $@
 
-${BLD_DIR}/%.o: ${LIB_DIR}/%.cpp | ${BLD_DIR}
+${BLD_DIR}/%.o: ${LIB_DIR}/%.cpp
 	${CC} ${CFLAGS} -c $< -o $@
 
 .PHONY: clean build
