@@ -8,7 +8,7 @@ sudo apt-get install libgtest-dev
 cd /usr/src/gtest
 sudo cmake .
 sudo make
-sudo cp lib/libgtest*.a /usr/lib
+sudo cp lib/*.a /usr/lib
 sudo ldconfig
 ```
 - Use `wsl`.
