@@ -15,16 +15,16 @@ namespace CHGraph
         int num_nodes = 0;
     };
 
+    struct Arc {
+        int from;
+        int to;
+        double weight;
+        int mid_node;
+    };
+
     struct PreprocGraph
     {
         std::vector<int> ranks;
-        
-        struct Arc {
-            int from;
-            int to;
-            double weight;
-            int mid_node;
-        };
         std::vector<Arc> arcs;
     };
 
