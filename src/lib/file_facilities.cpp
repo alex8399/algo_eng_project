@@ -11,3 +11,7 @@ void FileFacilities::read_destinations(const std::string &destinations_file, std
 void FileFacilities::dump_measurement(const Measurement &measurement, const std::string &output_file)
 {
 }
+
+void FileFacilities::write_graph(const CHGraph::Graph &graph, const std::string &graph_file)
+{
+}
