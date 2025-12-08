@@ -10,6 +10,8 @@ namespace FileFacilities
 {
     void read_graph(const std::string &graph_file, CHGraph::Graph &graph);
 
+    void write_graph(const CHGraph::Graph &graph, const std::string &graph_file);
+
     void read_destinations(const std::string &destinations_file, std::vector<CHGraph::Destination> &destinations);
 
     void dump_measurement(const Measurement &measurement, const std::string &output_file);

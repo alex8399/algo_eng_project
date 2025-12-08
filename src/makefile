@@ -19,7 +19,8 @@ TST_DIR = tst
 TST_TARGET_DIR = ${TST_BLD_DIR}
 TST_CFLAGS = -pthread -L/usr/lib -lgtest -lgtest_main
 TST_OBJS = \
-	${TST_BLD_DIR}/test_ch_graph.o
+	${TST_BLD_DIR}/test_ch_graph.o \
+ 	${TST_BLD_DIR}/test_file_facilities.o
 
 
 clean:
