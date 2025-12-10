@@ -18,20 +18,19 @@ void FileFacilities::read_graph(const std::string &graph_file, CHGraph::Graph &g
 void FileFacilities::read_destinations(const std::string &destinations_file, std::vector<CHGraph::Destination> &destinations)
 {
     std::ifstream file(destinations_file);
+    std::string line;
 
     if (!file.is_open())
     {
         throw std::runtime_error("Cannot open destinations file " + destinations_file);
     }
-
-    std::string line;
     
     while (std::getline(file, line)) {
         std::istringstream string_stream(line);
-        char first_char;
-        string_stream >> first_char;
+        char symbol;
+        string_stream >> symbol;
 
-        switch (first_char)
+        switch (symbol)
         {
             case COMMENT_SYMBOL:
             {
@@ -46,12 +45,14 @@ void FileFacilities::read_destinations(const std::string &destinations_file, std
                 {
                     throw std::runtime_error("Incorrect node number in the destinations file " + destinations_file);
                 }
+                
+                if (string_stream.fail())
+                {
+                    throw std::runtime_error("Incorrect format of the line in the destinations file " + destinations_file);
+                }
 
-                CHGraph::Destination destination;
-                destination.source = node_from;
-                destination.target = node_to;
+                CHGraph::Destination destination{.source = node_from, .target = node_to};
                 destinations.push_back(destination);
-
                 break;
             }
             default:
