@@ -1,10 +1,12 @@
 #include <stdexcept>
 #include "ch_graph.hpp"
 #include "file_facilities.hpp"
+#include <format>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <unordered_set>
 
 
 constexpr char DESTINATION_SYMBOL = 'd';
@@ -71,4 +73,23 @@ void FileFacilities::dump_measurement(const Measurement &measurement, const std:
 
 void FileFacilities::write_graph(const CHGraph::Graph &graph, const std::string &graph_file)
 {
+    std::ofstream file(graph_file);
+
+    if (!file.is_open())
+    {
+        throw std::runtime_error("Cannot open graph file " + graph_file);
+    }
+
+    std::unordered_set<int> nodes = {};
+    nodes.insert(graph.from.begin(), graph.from.end());
+    nodes.insert(graph.to.begin(), graph.to.end());
+
+    file << std::format("p sp {} {}", nodes.size(), graph.to.size()) << std::endl;
+
+    for (int ind = 0; ind < graph.from.size(); ++ind)
+    {
+        file << std::format("a {} {} {}", graph.from[ind], graph.to[ind], graph.weights[ind]);
+    }
+    
+    file.close();
 }
