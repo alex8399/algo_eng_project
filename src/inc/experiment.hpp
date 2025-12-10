@@ -6,7 +6,7 @@
 namespace Experiment
 {
     void run(const std::string &graph_file, const std::string &destinations_file,
-             const std::string &output_file, const int &run_number);
+             const std::string &output_file, const int run_number);
 }
 
 #endif
