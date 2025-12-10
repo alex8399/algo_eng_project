@@ -43,12 +43,12 @@ void FileFacilities::read_destinations(const std::string &destinations_file, std
                 
                 if (node_from < 0 || node_to < 0)
                 {
-                    throw std::runtime_error("Incorrect node number in the destinations file " + destinations_file);
+                    throw std::runtime_error("Negative node number in destinations file " + destinations_file);
                 }
                 
                 if (string_stream.fail())
                 {
-                    throw std::runtime_error("Incorrect format of the line in the destinations file " + destinations_file);
+                    throw std::runtime_error("Incorrect line in destinations file " + destinations_file);
                 }
 
                 CHGraph::Destination destination{.source = node_from, .target = node_to};
@@ -57,7 +57,7 @@ void FileFacilities::read_destinations(const std::string &destinations_file, std
             }
             default:
             {
-                throw std::runtime_error("Incorrect format of the line in the destinations file " + destinations_file);
+                throw std::runtime_error("Incorrect line in destinations file " + destinations_file);
             }
         }
     }
