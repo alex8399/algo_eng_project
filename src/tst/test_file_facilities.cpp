@@ -52,6 +52,14 @@ TEST(ReadDestinationsTests, SuccessfulRetrievingEmptyList)
     compare_destinations(expected_destinations, destinations);
 }
 
+TEST(ReadDestinationsTests, FileNotExist)
+{
+    std::vector<CHGraph::Destination> destinations;
+    const std::string destinations_file_path = "tst/data/test_facilities/non_existing_destinations_file.txt";
+
+    EXPECT_THROW(FileFacilities::read_destinations(destinations_file_path, destinations), std::runtime_error);
+}
+
 TEST(ReadDestinationsTests, NegativeNodeNumberInFile)
 {
     std::vector<CHGraph::Destination> destinations;
