@@ -8,7 +8,7 @@ namespace CHGraph
 
     struct Graph
     {
-        std::vector<int> from; //Possibly not needed
+        std::vector<int> first_out; //Possibly not needed
         std::vector<int> to;
         std::vector<double> weights;
 
