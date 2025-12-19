@@ -12,8 +12,6 @@ namespace CHGraph
         std::vector<int> to;
         std::vector<double> weights;
 
-        std::vector<int> first_out;
-
         int num_nodes = 0;
     };
 
