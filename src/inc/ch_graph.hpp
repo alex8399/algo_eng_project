@@ -8,7 +8,7 @@ namespace CHGraph
 
     struct Graph
     {
-        std::vector<int> from;
+        std::vector<int> from; //Possibly not needed
         std::vector<int> to;
         std::vector<double> weights;
 
@@ -17,17 +17,29 @@ namespace CHGraph
         int num_nodes = 0;
     };
 
-    struct Arc {
-        int from;
-        int to;
+    struct CHArc {
+        int from; //Possibly not needed
+        int to; 
         double weight;
         int mid_node;
     };
 
     struct PreprocGraph
-    {
-        std::vector<int> ranks;
-        std::vector<Arc> arcs;
+    {   
+        int num_nodes = 0;
+
+        std::vector<int> ranks; // ranks[node] = contraction order (0 = lowest)
+
+
+        // -------- Forward graph (upward edges) --------
+        // contains edges u -> v where ranks[u] < ranks[v]
+        std::vector<int> forward_first_out;  
+        std::vector<CHArc>   forward_arcs;
+
+        // -------- Backward graph (reversed upward edges) --------
+        // contains edges v -> u for each upward edge u -> v
+        std::vector<int> backward_first_out;
+        std::vector<CHArc>   backward_arcs;
     };
 
     struct Route
@@ -46,7 +58,7 @@ namespace CHGraph
 
     void preproc_graph_top_down(const Graph &graph, PreprocGraph &preproc_graph);
 
-    void query_route(const Graph &graph, const PreprocGraph &preproc_graph,
+    void query_route(const PreprocGraph &preproc_graph,
                      const Destination &destination, Route &route);
 }
 
