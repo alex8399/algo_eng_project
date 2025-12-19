@@ -56,7 +56,7 @@ namespace CHGraph
 
     void preproc_graph_top_down(const Graph &graph, PreprocGraph &preproc_graph);
 
-    void query_route(const PreprocGraph &preproc_graph,
+    void query_route(const CHGraph::Graph &graph, const PreprocGraph &preproc_graph,
                      const Destination &destination, Route &route);
 }
 
