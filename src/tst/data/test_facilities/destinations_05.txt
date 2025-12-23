@@ -1,0 +1,6 @@
+c This is test file 1
+d 454 65
+d 223 24
+d 45 5
+c Next line is formatted incorrectly, exception must be thrown
+d sdfg 45
