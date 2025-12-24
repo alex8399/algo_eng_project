@@ -30,12 +30,12 @@ namespace CHGraph
 
 
         // -------- Forward graph (upward edges) --------
-        // contains edges u -> v where ranks[u] < ranks[v]
+        // contains original edges u -> v where ranks[u] < ranks[v]
         std::vector<int> forward_first_out;  
         std::vector<CHArc>   forward_arcs;
 
-        // -------- Backward graph (reversed upward edges) --------
-        // contains edges v -> u for each upward edge u -> v
+        // -------- Backward graph (Reverse of Downward Graph) --------
+        // contains edges v -> u for each original edge u->v with ranks[u] > ranks[v]
         std::vector<int> backward_first_out;
         std::vector<CHArc>   backward_arcs;
     };
@@ -56,8 +56,11 @@ namespace CHGraph
 
     void preproc_graph_top_down(const Graph &graph, PreprocGraph &preproc_graph);
 
-    void query_route(const CHGraph::Graph &graph, const PreprocGraph &preproc_graph,
-                     const Destination &destination, Route &route);
+    // Helper functions query
+    bool stall_forward(int v, const std::vector<double>& dist_f, const PreprocGraph& preproc_graph);
+    bool stall_backward(int v, const std::vector<double>& dist_b, const PreprocGraph& preproc_graph);
+   
+    void query_route(const CHGraph::Graph &graph, const PreprocGraph &preproc_graph, const Destination &destination, Route &route);
 }
 
 #endif 
