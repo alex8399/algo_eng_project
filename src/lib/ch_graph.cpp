@@ -315,7 +315,6 @@ void CHGraph::query_route(const CHGraph::Graph &graph, const CHGraph::PreprocGra
 
     if (s == t) { 
         route.total_weight = 0.0; 
-        if (unpack_path) route.nodes = {s};
         return; 
     }
 
