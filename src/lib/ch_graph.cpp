@@ -300,7 +300,135 @@ void CHGraph::preproc_graph_top_down(const CHGraph::Graph &graph, CHGraph::Prepr
     }
 }
 
-void CHGraph::query_route(const CHGraph::Graph &graph, const CHGraph::PreprocGraph &preproc_graph,
-                          const CHGraph::Destination &destination, CHGraph::Route &route)
+void CHGraph::query_route(const CHGraph::Graph &graph, const CHGraph::PreprocGraph &preproc_graph, const CHGraph::Destination &destination, CHGraph::Route &route)
 {
+    route.nodes.clear();
+    route.total_weight = std::numeric_limits<double>::infinity();
+
+    const int n = preproc_graph.num_nodes;
+    const int s = destination.source; //source 
+    const int t = destination.target; //destination
+
+    if (n <= 0) return;
+
+    if (s < 0 || s >= n || t < 0 || t >= n) return;
+
+    if (s == t) { 
+        route.total_weight = 0.0; 
+        if (unpack_path) route.nodes = {s};
+        return; 
+    }
+
+
+    const double INF = std::numeric_limits<double>::infinity();
+
+    //Stores distances for the forward and backward graph.  Sets inital distance to INF
+    std::vector<double> dist_f(n, INF), dist_b(n, INF);
+
+    // Forward and bacwkard graph predecesor arrays for unpacking
+    std::vector<int> prev_f(n, -1), prev_b(n, -1);
+
+    using QItem = std::pair<double,int>;
+    //Sets pqf (priority queue for forward graph) and pqb (priority queue for backward graph)
+    std::priority_queue<QItem, std::vector<QItem>, std::greater<QItem>> pqf, pqb; 
+
+    dist_f[s] = 0.0; pqf.push(QItem(0.0, s));
+    dist_b[t] = 0.0; pqb.push(QItem(0.0, t));
+
+    double best_dist = INF; //set current best distance from s to t
+    int meeting_node = -1;  // stores node where both searches meet and achieve best distance
+
+    //Returns distance of an element at the top of a given queue
+    auto top_dist = [](const auto &pq)->double { return pq.empty() ? std::numeric_limits<double>::infinity() : pq.top().first; };
+
+    while (!pqf.empty() || !pqb.empty()) {
+        double forward_min_dist = top_dist(pqf);
+        double backward_min_dist = top_dist(pqb);
+
+        
+        if (forward_min_dist + backward_min_dist >= best_dist) break; //Terminate as minimum distance cannot be improved
+
+        if (forward_min_dist <= backward_min_dist) { //Search on forward graph
+            
+            auto [d,u] = pqf.top(); // d = node distance,  u = node index
+            pqf.pop();  //Remove element from the queue
+
+            if (d > dist_f[u]) continue; // check extracted node has not already been extracted with lower distance
+
+            // Check incoming lower-ranked neighbors
+            if (stall_forward(u, dist_f, preproc_graph)) {
+                // Do not relax outgoing neighbors for u
+                // Consider u as a possible meeting with backward distances
+                if (dist_b[u] < INF) {
+                    double candidate_distance = dist_f[u] + dist_b[u];
+                    if (candidate_distance < best_dist) { best_dist = candidate_distance; meeting_node = u; }
+                }
+                continue;
+            }
+
+            // Expand outgoing upward arcs
+            for (int e = preproc_graph.forward_first_out[u]; e < preproc_graph.forward_first_out[u + 1]; ++e) {
+                const CHArc &arc = preproc_graph.forward_arcs[e];
+                int v = arc.to;
+                double new_distance = d + arc.weight; 
+                if (new_distance < dist_f[v]) {  //Check if  dist(s,u)+ w(u,v) < dist(v)
+                    dist_f[v] = new_distance; //Store updated distance
+                    prev_f[v] = u; // Set u as  predecessor of v
+                    pqf.push(QItem(new_distance, v)); // Push node with updated distance to the queue
+
+                    // Update best_dist if other search has a value < infinity  for node v
+                    if (dist_b[v] < INF) {
+                        double candidate_distance = dist_f[v] + dist_b[v];
+                        if (candidate_distance < best_dist) { best_dist = candidate_distance; meeting_node = v; }
+                    }
+                }
+            }
+            // Update best_dist if other search has a value < infinity for node u
+            if (dist_b[u] < INF) {
+                double candidate_distance = dist_f[u] + dist_b[u];
+                if (candidate_distance < best_dist) { best_dist = candidate_distance; meeting_node = u; }
+            }
+
+        } else { //Search on reversed graph
+            
+            auto [d,u] = pqb.top();  // d = node distance,  u = node index
+            pqb.pop(); //Remove element from the  queue
+            if (d > dist_b[u]) continue;
+
+            //Check incoming arcs
+            if (stall_backward(u, dist_b, preproc_graph)) {
+                if (dist_f[u] < INF) {
+                    double candidate_distance = dist_f[u] + dist_b[u];
+                    if (candidate_distance < best_dist) { best_dist = candidate_distance; meeting_node = u; }
+                }
+                continue;
+            }
+
+            // Expand outgoing arcs in bacwkards search
+            for (int e = preproc_graph.backward_first_out[u]; e < preproc_graph.backward_first_out[u + 1]; ++e) {
+                const CHArc &arc = preproc_graph.backward_arcs[e];
+                int v = arc.to; 
+                double new_distance = d + arc.weight;
+                if (new_distance < dist_b[v]) {
+                    dist_b[v] = new_distance;
+                    prev_b[v] = u;
+                    pqb.push(QItem(new_distance, v));
+                    
+                    // Update best_dist if other search has a value < infinity for node v                      
+                    if (dist_f[v] < INF) {
+                        double candidate_distance = dist_f[v] + dist_b[v];
+                        if (candidate_distance < best_dist) { best_dist = candidate_distance; meeting_node = v; }
+                    }
+                }
+            }
+
+            // Update best_dist if other search has a value < infinity for node u            
+            if (dist_f[u] < INF) {
+                double candidate_distance = dist_f[u] + dist_b[u];
+                if (candidate_distance < best_dist) { best_dist = candidate_distance; meeting_node = u; }
+            }
+        }
+    }
+
+    route.total_weight = best_dist;
 }
