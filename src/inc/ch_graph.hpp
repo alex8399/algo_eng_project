@@ -30,12 +30,12 @@ namespace CHGraph
 
 
         // -------- Forward graph (upward edges) --------
-        // contains original edges u -> v where ranks[u] < ranks[v]
+        // contains edges u -> v where ranks[u] < ranks[v]
         std::vector<int> forward_first_out;  
         std::vector<CHArc>   forward_arcs;
 
         // -------- Backward graph (Reverse of Downward Graph) --------
-        // contains edges v -> u for each original edge u->v with ranks[u] > ranks[v]
+        // contains edges v -> u for each edge (original or shortcut) u -> v with ranks[u] > ranks[v]"
         std::vector<int> backward_first_out;
         std::vector<CHArc>   backward_arcs;
     };
