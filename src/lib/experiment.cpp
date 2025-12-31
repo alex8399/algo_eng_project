@@ -3,21 +3,18 @@
 #include "measurement.hpp"
 #include "ch_graph.hpp"
 #include "timer.hpp"
+#include <format>
 #include <vector>
 
-#define MEASURE_TIME(func, measurements, stopwatch, times)             \
-    {                                                                  \
-        for (int counter = 0; counter < times; ++counter)              \
-        {                                                              \
-            stopwatch.start();                                         \
-            func;                                                      \
-            stopwatch.stop();                                          \
-            measurements.push_back(stopwatch.get_result());            \
-        }                                                              \
-    }
+#define MEASURE_TIME(func, stopwatch) \
+    {                                 \
+        stopwatch.start();            \
+        func;                         \
+        stopwatch.stop();             \
+    };
 
 void Experiment::run(const std::string &graph_file, const std::string &destinations_file,
-                     const std::string &output_file, const int &run_number)
+                     const std::string &output_file, const int run_number)
 {
     CHGraph::Graph graph;
     std::vector<CHGraph::Destination> destinations;
@@ -26,39 +23,52 @@ void Experiment::run(const std::string &graph_file, const std::string &destinati
     FileFacilities::read_destinations(destinations_file, destinations);
 
     CHGraph::PreprocGraph bottom_up_graph, top_down_graph;
-    CHGraph::Route route;
     Measurement measurement;
     Timer timer;
 
-    MEASURE_TIME(
-        CHGraph::preproc_graph_bottom_up(graph, bottom_up_graph), 
-        measurement.data["preproc_graph_bottom_up"],
-        timer,
-        run_number);
-    
-    for (int ind = 0; ind < destinations.size(); ++ind)
+    for (int ind = 0; ind < run_number; ++ind)
     {
-        MEASURE_TIME(
-            CHGraph::query_route(graph, bottom_up_graph, destinations[ind], route),
-            measurement.data["query_route_bottom_up_" + std::to_string(ind)],
-            timer,
-            run_number);
+        CHGraph::PreprocGraph preproc_graph;
+        MEASURE_TIME(CHGraph::preproc_graph_bottom_up(graph, preproc_graph), timer);
+        measurement.data["preproc_graph_bottom_up"].push_back(timer.get_result());
+
+        if (ind + 1 == run_number)
+        {
+            bottom_up_graph = preproc_graph;
+        }
     }
 
-    MEASURE_TIME(
-        CHGraph::preproc_graph_top_down(graph, top_down_graph), 
-        measurement.data["preproc_graph_top_down"],
-        timer,
-        run_number);
-    
-    for (int ind = 0; ind < destinations.size(); ++ind)
+    for (int dest_ind = 0; dest_ind < destinations.size(); ++dest_ind)
     {
-        MEASURE_TIME(
-            CHGraph::query_route(graph, top_down_graph, destinations[ind], route),
-            measurement.data["query_route_top_down_" + std::to_string(ind)],
-            timer,
-            run_number);
+        for (int ind = 0; ind < run_number; ++ind)
+        {
+            CHGraph::Route route;
+            MEASURE_TIME(CHGraph::query_route(graph, bottom_up_graph, destinations[dest_ind], route), timer);
+            measurement.data["query_route_bottom_up_" + std::format("{:03}", dest_ind)].push_back(timer.get_result());
+        }
     }
-    
+
+    for (int ind = 0; ind < run_number; ++ind)
+    {
+        CHGraph::PreprocGraph preproc_graph;
+        MEASURE_TIME(CHGraph::preproc_graph_top_down(graph, preproc_graph), timer);
+        measurement.data["preproc_graph_top_down"].push_back(timer.get_result());
+
+        if (ind + 1 == run_number)
+        {
+            top_down_graph = preproc_graph;
+        }
+    }
+
+    for (int dest_ind = 0; dest_ind < destinations.size(); ++dest_ind)
+    {
+        for (int ind = 0; ind < run_number; ++ind)
+        {
+            CHGraph::Route route;
+            MEASURE_TIME(CHGraph::query_route(graph, top_down_graph, destinations[dest_ind], route), timer);
+            measurement.data["query_route_top_down_" + std::format("{:03}", dest_ind)].push_back(timer.get_result());
+        }
+    }
+
     FileFacilities::dump_measurement(measurement, output_file);
 }

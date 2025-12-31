@@ -1,0 +1,4 @@
+c This is test file 1
+d 454 65
+c Negative node, exception must be thrown
+d -223 24
