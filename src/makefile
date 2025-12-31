@@ -19,11 +19,13 @@ TST_DIR = tst
 TST_TARGET_DIR = ${TST_BLD_DIR}
 TST_CFLAGS = -pthread -L/usr/lib -lgtest -lgtest_main
 TST_OBJS = \
-	${TST_BLD_DIR}/test_ch_graph.o
+	${TST_BLD_DIR}/test_ch_graph.o \
+ 	${TST_BLD_DIR}/test_file_facilities.o \
+ 	${TST_BLD_DIR}/test_timer.o
 
 
 clean:
-	rm -rf ${BLD_DIR}/*.o ${TARGET_DIR}/*.exe ${TST_BLD_DIR}/*.o ${TST_TARGET_DIR}/*.exe
+	rm -rf ${BLD_DIR}/*.o ${TARGET_DIR}/*.exe ${TST_BLD_DIR}/*.o ${TST_TARGET_DIR}/*.exe tst/tmp/*.tmp
 
 build: ${TARGET_DIR}/${TARGET} ${TST_BLD_DIR}/${TST_TARGET}
 
