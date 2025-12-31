@@ -4,10 +4,11 @@
 #include <unordered_map>
 #include <vector>
 #include <string>
+#include "timer.hpp"
 
 struct Measurement
 {
-    std::unordered_map<std::string, std::vector<double>> data;
+    std::unordered_map<std::string, std::vector<TimerTime>> data;
 };
 
 #endif
