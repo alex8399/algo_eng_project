@@ -291,3 +291,21 @@ TEST(CHQuery, LargerGraph) {
     double expected = dijkstra_distance(g, 0, 9);
     EXPECT_DOUBLE_EQ(route.total_weight, expected);
 }
+
+
+//testing ranking nodes using heuristic
+
+TEST(CHPreprocessing, ShortcutCountIsReasonable)
+{
+    CHGraph::Graph g = make_simple_graph();
+    CHGraph::PreprocGraph p;
+
+    CHGraph::preproc_graph_top_down(g, p);
+
+    int shortcut_count = 0;
+    for (const auto &arc : p.forward_arcs)
+        if (arc.mid_node != -1)
+            shortcut_count++;
+
+    EXPECT_LE(shortcut_count, 2); // heuristic-dependent bound
+}

@@ -6,11 +6,37 @@
 #include <functional>
 #include <utility>
 #include <cstddef>
+#include <algorithm>
 
 
 void CHGraph::preproc_graph_bottom_up(const CHGraph::Graph &graph, CHGraph::PreprocGraph &preproc_graph)
 {
 }
+
+static std::vector<int> rank_importance(const std::vector<std::vector<int>> &in_deg,
+                const std::vector<std::vector<int>> &out_deg)
+{
+    const int n = in_deg.size();
+    std::vector<std::pair<int,int>> scored; // (importance, node)
+    scored.reserve(n);
+
+    for (int v = 0; v < n; ++v) {
+        int in_d  = in_deg[v].size();
+        int out_d = out_deg[v].size();
+        int importance = in_d * out_d + out_d;
+        scored.emplace_back(importance, v);
+    }
+
+    // smaller importance = contracted earlier
+    std::sort(scored.begin(), scored.end());
+
+    std::vector<int> rank(n);
+    for (int i = 0; i < n; ++i)
+        rank[scored[i].second] = i;
+
+    return rank;
+}
+
 
 void CHGraph::preproc_graph_top_down(const CHGraph::Graph &graph, CHGraph::PreprocGraph &preproc_graph)
 {
@@ -91,8 +117,17 @@ void CHGraph::preproc_graph_top_down(const CHGraph::Graph &graph, CHGraph::Prepr
             in_edges[to].push_back(OverlayEdge{from, weight, mid_node});
     };
 
-    for (int v = 0; v < n; ++v)
-        preproc_graph.ranks[v] = v;
+    std::vector<std::vector<int>> in_deg(n), out_deg(n);
+    for (int v = 0; v < n; ++v) {
+        for (auto &e : in_edges[v])
+            in_deg[v].push_back(e.to);
+        for (auto &e : out_edges[v])
+            out_deg[v].push_back(e.to);
+    }
+
+    // compute heuristic-based ranking
+    preproc_graph.ranks = rank_importance(in_deg, out_deg);
+
 
     std::vector<unsigned char> contracted(n, 0);
 
