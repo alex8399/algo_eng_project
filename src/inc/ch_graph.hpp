@@ -23,7 +23,6 @@ namespace CHGraph
 
     struct PreprocGraph
     {   
-        int num_nodes = 0;
 
         std::vector<int> ranks; // ranks[node] = contraction order (0 = lowest)
 
