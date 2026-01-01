@@ -9,6 +9,7 @@
 #include <algorithm>
 
 
+
 void CHGraph::preproc_graph_bottom_up(const CHGraph::Graph &graph, CHGraph::PreprocGraph &preproc_graph)
 {
 }
@@ -40,24 +41,21 @@ static std::vector<int> rank_importance(const std::vector<std::vector<int>> &in_
 
 void CHGraph::preproc_graph_top_down(const CHGraph::Graph &graph, CHGraph::PreprocGraph &preproc_graph)
 {
-    const int n = graph.num_nodes;
+    const int n = graph.first_out.empty() ? 0 : static_cast<int>(graph.first_out.size()) - 1;
 
-    // reset output
     preproc_graph = CHGraph::PreprocGraph{};
-    preproc_graph.num_nodes = n;
     preproc_graph.ranks.assign(n, 0);
 
     struct OverlayEdge
     {
         int to;
         double weight;
-        int mid; // -1 for original edges, otherwise contracted middle node
+        int mid;
     };
 
     std::vector<std::vector<OverlayEdge>> out_edges(n);
     std::vector<std::vector<OverlayEdge>> in_edges(n);
 
-    // build overlay from CSR input.
     if (n > 0 && static_cast<int>(graph.first_out.size()) >= n + 1)
     {
         for (int u = 0; u < n; ++u)
@@ -70,12 +68,11 @@ void CHGraph::preproc_graph_top_down(const CHGraph::Graph &graph, CHGraph::Prepr
                 const double w = graph.weights[e];
                 out_edges[u].push_back(OverlayEdge{v, w, -1});
                 if (0 <= v && v < n)
-                    in_edges[v].push_back(OverlayEdge{u, w, -1}); // store 'from' in .to field
+                    in_edges[v].push_back(OverlayEdge{u, w, -1});
             }
         }
     }
 
-    // add edge or decrease its weight; keep reverse adjacency consistent.
     const int MID_ORIGINAL = -1;
     auto add_or_decrease = [&](int from, int to, double weight, int mid_node)
     {
@@ -125,9 +122,13 @@ void CHGraph::preproc_graph_top_down(const CHGraph::Graph &graph, CHGraph::Prepr
             out_deg[v].push_back(e.to);
     }
 
-    // compute heuristic-based ranking
     preproc_graph.ranks = rank_importance(in_deg, out_deg);
 
+    std::vector<int> order(n);
+    for (int i = 0; i < n; ++i) order[i] = i;
+    std::sort(order.begin(), order.end(), [&](int a, int b) {
+        return preproc_graph.ranks[a] < preproc_graph.ranks[b];
+    });
 
     std::vector<unsigned char> contracted(n, 0);
 
@@ -143,20 +144,20 @@ void CHGraph::preproc_graph_top_down(const CHGraph::Graph &graph, CHGraph::Prepr
         touched.clear();
     };
 
-    typedef std::pair<double, int> QItem; // (dist, node)
+    typedef std::pair<double, int> QItem;
     std::priority_queue<QItem, std::vector<QItem>, std::greater<QItem>> pq;
 
-    for (int v = 0; v < n; ++v)
+    for (int idx = 0; idx < n; ++idx)
     {
+        const int v = order[idx];
         if (contracted[v])
             continue;
 
-        // incoming neighbors U: edges u -> v (stored in in_edges[v] as {u,...})
-        std::vector<std::pair<int, double>> incoming; // (u, w_uv)
+        std::vector<std::pair<int, double>> incoming;
         incoming.reserve(in_edges[v].size());
         for (std::size_t i = 0; i < in_edges[v].size(); ++i)
         {
-            const int u = in_edges[v][i].to; // 'from'
+            const int u = in_edges[v][i].to;
             const double w_uv = in_edges[v][i].weight;
             if (u == v || u < 0 || u >= n || contracted[u])
                 continue;
@@ -176,8 +177,7 @@ void CHGraph::preproc_graph_top_down(const CHGraph::Graph &graph, CHGraph::Prepr
                 incoming.push_back(std::make_pair(u, w_uv));
         }
 
-        // outgoing neighbors W: edges v -> w
-        std::vector<std::pair<int, double>> outgoing; // (w, w_vw)
+        std::vector<std::pair<int, double>> outgoing;
         outgoing.reserve(out_edges[v].size());
         for (std::size_t i = 0; i < out_edges[v].size(); ++i)
         {
@@ -207,14 +207,12 @@ void CHGraph::preproc_graph_top_down(const CHGraph::Graph &graph, CHGraph::Prepr
             continue;
         }
 
-        // run witness search and add missing shortcuts u->w (mid_node = v).
         for (std::size_t iu = 0; iu < incoming.size(); ++iu)
         {
             const int u = incoming[iu].first;
             const double w_uv = incoming[iu].second;
 
-            // targets W with via-cost P_w = w(u,v)+w(v,w)
-            std::vector<std::pair<int, double>> targets; // (w, P_w)
+            std::vector<std::pair<int, double>> targets;
             targets.reserve(outgoing.size());
             double Pmax = 0.0;
             for (std::size_t iw = 0; iw < outgoing.size(); ++iw)
@@ -231,7 +229,6 @@ void CHGraph::preproc_graph_top_down(const CHGraph::Graph &graph, CHGraph::Prepr
             if (targets.empty())
                 continue;
 
-            // witness dijkstra from u on overlay excluding v and contracted nodes; stop at Pmax.
             reset_dist();
             while (!pq.empty())
                 pq.pop();
@@ -276,20 +273,18 @@ void CHGraph::preproc_graph_top_down(const CHGraph::Graph &graph, CHGraph::Prepr
                 }
             }
 
-            // add shortcuts where witness path is worse than going via v.
             for (std::size_t it = 0; it < targets.size(); ++it)
             {
                 const int w = targets[it].first;
                 const double Pw = targets[it].second;
                 if (dist[w] > Pw)
-                    add_or_decrease(u, w, Pw, v); // middle node approach
+                    add_or_decrease(u, w, Pw, v);
             }
         }
 
         contracted[v] = 1;
     }
 
-    // build the forward/ downward graphs
     std::vector<std::vector<CHGraph::CHArc>> f_adj(n), b_adj(n);
 
     for (int u = 0; u < n; ++u)
@@ -301,10 +296,9 @@ void CHGraph::preproc_graph_top_down(const CHGraph::Graph &graph, CHGraph::Prepr
                 continue;
 
             if (preproc_graph.ranks[u] < preproc_graph.ranks[v])
-            {
                 f_adj[u].push_back(CHGraph::CHArc{u, v, out_edges[u][i].weight, out_edges[u][i].mid});
+            else if (preproc_graph.ranks[u] > preproc_graph.ranks[v])
                 b_adj[v].push_back(CHGraph::CHArc{v, u, out_edges[u][i].weight, out_edges[u][i].mid});
-            }
         }
     }
 
@@ -335,7 +329,136 @@ void CHGraph::preproc_graph_top_down(const CHGraph::Graph &graph, CHGraph::Prepr
     }
 }
 
+
+
 void CHGraph::query_route(const CHGraph::Graph &graph, const CHGraph::PreprocGraph &preproc_graph, const CHGraph::Destination &destination, CHGraph::Route &route)
 {
-    
+    route.nodes.clear();
+    route.total_weight = std::numeric_limits<double>::infinity();
+
+    const int n = static_cast<int>(preproc_graph.ranks.size());
+    const int s = destination.source; //source 
+    const int t = destination.target; //destination
+
+    if (n <= 0) return;
+
+    if (s < 0 || s >= n || t < 0 || t >= n) return;
+
+    if (s == t) { 
+        route.total_weight = 0.0; 
+        return; 
+    }
+
+
+    const double INF = std::numeric_limits<double>::infinity();
+
+    //Stores distances for the forward and backward graph.  Sets inital distance to INF
+    std::vector<double> dist_f(n, INF), dist_b(n, INF);
+
+    // Forward and bacwkard graph predecesor arrays for unpacking
+    std::vector<int> prev_f(n, -1), prev_b(n, -1);
+
+    using QItem = std::pair<double,int>;
+    //Sets pqf (priority queue for forward graph) and pqb (priority queue for backward graph)
+    std::priority_queue<QItem, std::vector<QItem>, std::greater<QItem>> pqf, pqb; 
+
+    dist_f[s] = 0.0; pqf.push(QItem(0.0, s));
+    dist_b[t] = 0.0; pqb.push(QItem(0.0, t));
+
+    double best_dist = INF; //set current best distance from s to t
+    int meeting_node = -1;  // stores node where both searches meet and achieve best distance
+
+    //Returns distance of an element at the top of a given queue
+    auto top_dist = [](const auto &pq)->double { return pq.empty() ? std::numeric_limits<double>::infinity() : pq.top().first; };
+
+    while (!pqf.empty() || !pqb.empty()) {
+        double forward_min_dist = top_dist(pqf);
+        double backward_min_dist = top_dist(pqb);
+
+        
+        if (forward_min_dist + backward_min_dist >= best_dist) break; //Terminate as minimum distance cannot be improved
+
+        if (forward_min_dist <= backward_min_dist) { //Search on forward graph
+            
+            auto [d,u] = pqf.top(); // d = node distance,  u = node index
+            pqf.pop();  //Remove element from the queue
+
+            if (d > dist_f[u]) continue; // check extracted node has not already been extracted with lower distance
+
+            // Check incoming lower-ranked neighbors
+            if (stall_forward(u, dist_f, preproc_graph)) {
+                // Do not relax outgoing neighbors for u
+                // Consider u as a possible meeting with backward distances
+                if (dist_b[u] < INF) {
+                    double candidate_distance = dist_f[u] + dist_b[u];
+                    if (candidate_distance < best_dist) { best_dist = candidate_distance; meeting_node = u; }
+                }
+                continue;
+            }
+
+            // Expand outgoing upward arcs
+            for (int e = preproc_graph.forward_first_out[u]; e < preproc_graph.forward_first_out[u + 1]; ++e) {
+                const CHArc &arc = preproc_graph.forward_arcs[e];
+                int v = arc.to;
+                double new_distance = d + arc.weight; 
+                if (new_distance < dist_f[v]) {  //Check if  dist(s,u)+ w(u,v) < dist(v)
+                    dist_f[v] = new_distance; //Store updated distance
+                    prev_f[v] = u; // Set u as  predecessor of v
+                    pqf.push(QItem(new_distance, v)); // Push node with updated distance to the queue
+
+                    // Update best_dist if other search has a value < infinity  for node v
+                    if (dist_b[v] < INF) {
+                        double candidate_distance = dist_f[v] + dist_b[v];
+                        if (candidate_distance < best_dist) { best_dist = candidate_distance; meeting_node = v; }
+                    }
+                }
+            }
+            // Update best_dist if other search has a value < infinity for node u
+            if (dist_b[u] < INF) {
+                double candidate_distance = dist_f[u] + dist_b[u];
+                if (candidate_distance < best_dist) { best_dist = candidate_distance; meeting_node = u; }
+            }
+
+        } else { //Search on reversed graph
+            
+            auto [d,u] = pqb.top();  // d = node distance,  u = node index
+            pqb.pop(); //Remove element from the  queue
+            if (d > dist_b[u]) continue;
+
+            //Check incoming arcs
+            if (stall_backward(u, dist_b, preproc_graph)) {
+                if (dist_f[u] < INF) {
+                    double candidate_distance = dist_f[u] + dist_b[u];
+                    if (candidate_distance < best_dist) { best_dist = candidate_distance; meeting_node = u; }
+                }
+                continue;
+            }
+
+            // Expand outgoing arcs in bacwkards search
+            for (int e = preproc_graph.backward_first_out[u]; e < preproc_graph.backward_first_out[u + 1]; ++e) {
+                const CHArc &arc = preproc_graph.backward_arcs[e];
+                int v = arc.to; 
+                double new_distance = d + arc.weight;
+                if (new_distance < dist_b[v]) {
+                    dist_b[v] = new_distance;
+                    prev_b[v] = u;
+                    pqb.push(QItem(new_distance, v));
+                    
+                    // Update best_dist if other search has a value < infinity for node v                      
+                    if (dist_f[v] < INF) {
+                        double candidate_distance = dist_f[v] + dist_b[v];
+                        if (candidate_distance < best_dist) { best_dist = candidate_distance; meeting_node = v; }
+                    }
+                }
+            }
+
+            // Update best_dist if other search has a value < infinity for node u            
+            if (dist_f[u] < INF) {
+                double candidate_distance = dist_f[u] + dist_b[u];
+                if (candidate_distance < best_dist) { best_dist = candidate_distance; meeting_node = u; }
+            }
+        }
+    }
+
+    route.total_weight = best_dist;
 }

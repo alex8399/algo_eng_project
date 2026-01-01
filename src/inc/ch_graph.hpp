@@ -9,10 +9,9 @@ namespace CHGraph
     struct Graph
     {
         std::vector<int> first_out;
+        std::vector<int> from;
         std::vector<int> to;
         std::vector<double> weights;
-
-        int num_nodes = 0;
     };
 
     struct CHArc {
@@ -24,7 +23,6 @@ namespace CHGraph
 
     struct PreprocGraph
     {   
-        int num_nodes = 0;
 
         std::vector<int> ranks; // ranks[node] = contraction order (0 = lowest)
 
@@ -52,12 +50,27 @@ namespace CHGraph
         int target = -1;
     };
 
+
+bool stall_forward(int v,
+                   const std::vector<double>& dist_f,
+                   const PreprocGraph& preproc_graph);
+
+bool stall_backward(int v,
+                    const std::vector<double>& dist_b,
+                    const PreprocGraph& preproc_graph);
+
+
+
+
     void preproc_graph_bottom_up(const Graph &graph, PreprocGraph &preproc_graph);
 
     void preproc_graph_top_down(const Graph &graph, PreprocGraph &preproc_graph);
 
+
     void query_route(const CHGraph::Graph &graph, const PreprocGraph &preproc_graph,
                      const Destination &destination, Route &route);
 }
+
+
 
 #endif 
