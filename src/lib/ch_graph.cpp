@@ -375,20 +375,25 @@ void CHGraph::query_route(const CHGraph::Graph &graph, const CHGraph::PreprocGra
         double forward_min_dist = top_dist(pqf);
         double backward_min_dist = top_dist(pqb);
 
-        
-        if (forward_min_dist + backward_min_dist >= best_dist) break; //Terminate as minimum distance cannot be improved
 
-        if (forward_min_dist <= backward_min_dist) { //Search on forward graph
+        bool forward_can_improve = forward_min_dist < best_dist;
+        bool backward_can_improve = backward_min_dist < best_dist;
+        
+        if (!forward_can_improve && !backward_can_improve) break; //stop serach if forward and backward search cannot improve best_dist
+
+        // Continue with direction that can still improve and has smaller distance at the top of the queue
+        bool do_forward = forward_can_improve && (!backward_can_improve || forward_min_dist <= backward_min_dist);
+
+        if (do_forward) { //Search on forward graph
             
             auto [d,u] = pqf.top(); // d = node distance,  u = node index
             pqf.pop();  //Remove element from the queue
 
-            if (d > dist_f[u]) continue; // check extracted node has not already been extracted with lower distance
+            if (d > dist_f[u]) continue; // Skip if already settled with better distance
 
-            // Check incoming lower-ranked neighbors
+            // Stall-on-demand: check if better path via lower-ranked neighbor exists
             if (stall_forward(u, dist_f, preproc_graph)) {
-                // Do not relax outgoing neighbors for u
-                // Consider u as a possible meeting with backward distances
+                // Check for meeting point settled in both directions
                 if (dist_b[u] < INF) {
                     double candidate_distance = dist_f[u] + dist_b[u];
                     if (candidate_distance < best_dist) { best_dist = candidate_distance; meeting_node = u; }
@@ -401,19 +406,14 @@ void CHGraph::query_route(const CHGraph::Graph &graph, const CHGraph::PreprocGra
                 const CHArc &arc = preproc_graph.forward_arcs[e];
                 int v = arc.to;
                 double new_distance = d + arc.weight; 
-                if (new_distance < dist_f[v]) {  //Check if  dist(s,u)+ w(u,v) < dist(v)
-                    dist_f[v] = new_distance; //Store updated distance
-                    prev_f[v] = u; // Set u as  predecessor of v
-                    pqf.push(QItem(new_distance, v)); // Push node with updated distance to the queue
-
-                    // Update best_dist if other search has a value < infinity  for node v
-                    if (dist_b[v] < INF) {
-                        double candidate_distance = dist_f[v] + dist_b[v];
-                        if (candidate_distance < best_dist) { best_dist = candidate_distance; meeting_node = v; }
-                    }
+                if (new_distance < dist_f[v]) {
+                    dist_f[v] = new_distance;
+                    prev_f[v] = u;
+                    pqf.push(QItem(new_distance, v));
                 }
             }
-            // Update best_dist if other search has a value < infinity for node u
+            
+
             if (dist_b[u] < INF) {
                 double candidate_distance = dist_f[u] + dist_b[u];
                 if (candidate_distance < best_dist) { best_dist = candidate_distance; meeting_node = u; }
@@ -425,7 +425,7 @@ void CHGraph::query_route(const CHGraph::Graph &graph, const CHGraph::PreprocGra
             pqb.pop(); //Remove element from the  queue
             if (d > dist_b[u]) continue;
 
-            //Check incoming arcs
+            // Stall-on-demand on backward search
             if (stall_backward(u, dist_b, preproc_graph)) {
                 if (dist_f[u] < INF) {
                     double candidate_distance = dist_f[u] + dist_b[u];
@@ -434,7 +434,7 @@ void CHGraph::query_route(const CHGraph::Graph &graph, const CHGraph::PreprocGra
                 continue;
             }
 
-            // Expand outgoing arcs in bacwkards search
+            // Expand outgoing arcs in backwards search
             for (int e = preproc_graph.backward_first_out[u]; e < preproc_graph.backward_first_out[u + 1]; ++e) {
                 const CHArc &arc = preproc_graph.backward_arcs[e];
                 int v = arc.to; 
@@ -443,16 +443,10 @@ void CHGraph::query_route(const CHGraph::Graph &graph, const CHGraph::PreprocGra
                     dist_b[v] = new_distance;
                     prev_b[v] = u;
                     pqb.push(QItem(new_distance, v));
-                    
-                    // Update best_dist if other search has a value < infinity for node v                      
-                    if (dist_f[v] < INF) {
-                        double candidate_distance = dist_f[v] + dist_b[v];
-                        if (candidate_distance < best_dist) { best_dist = candidate_distance; meeting_node = v; }
-                    }
                 }
             }
 
-            // Update best_dist if other search has a value < infinity for node u            
+            // Check meeting point
             if (dist_f[u] < INF) {
                 double candidate_distance = dist_f[u] + dist_b[u];
                 if (candidate_distance < best_dist) { best_dist = candidate_distance; meeting_node = u; }

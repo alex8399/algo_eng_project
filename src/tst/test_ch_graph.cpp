@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 #include "ch_graph.hpp"
+#include "file_facilities.hpp"
+#include <cmath>
 
 
 
@@ -147,4 +149,85 @@ TEST(CHPreprocessing, AllNodesAreRankedExactlyOnce)
     for (int i = 0; i < n; ++i) {
         EXPECT_TRUE(seen[i]);
     }
+}
+
+// Query tests using simple graph
+TEST(CHQuery, SimpleQuerySameNode)
+{
+    CHGraph::Graph g = make_simple_graph();
+    CHGraph::PreprocGraph p;
+    CHGraph::preproc_graph_top_down(g, p);
+
+    CHGraph::Destination dest{.source = 0, .target = 0};
+    CHGraph::Route route;
+    CHGraph::query_route(g, p, dest, route);
+
+    EXPECT_EQ(route.total_weight, 0.0);
+}
+
+TEST(CHQuery, SimpleQueryDirectEdge)
+{
+    CHGraph::Graph g = make_simple_graph();
+    CHGraph::PreprocGraph p;
+    CHGraph::preproc_graph_top_down(g, p);
+
+    CHGraph::Destination dest{.source = 0, .target = 1};
+    CHGraph::Route route;
+    CHGraph::query_route(g, p, dest, route);
+
+    EXPECT_EQ(route.total_weight, 1.0);
+}
+
+TEST(CHQuery, SimpleQueryDirectEdge2)
+{
+    CHGraph::Graph g = make_simple_graph();
+    CHGraph::PreprocGraph p;
+    CHGraph::preproc_graph_top_down(g, p);
+
+    CHGraph::Destination dest{.source = 1, .target = 2};
+    CHGraph::Route route;
+    CHGraph::query_route(g, p, dest, route);
+    
+    EXPECT_EQ(route.total_weight, 1.0);
+}
+
+TEST(CHQuery, SimpleQueryTwoHops)
+{
+    CHGraph::Graph g = make_simple_graph();
+    CHGraph::PreprocGraph p;
+    CHGraph::preproc_graph_top_down(g, p);
+
+    CHGraph::Destination dest{.source = 0, .target = 2};
+    CHGraph::Route route;
+    CHGraph::query_route(g, p, dest, route);
+
+    // Shortest path: 0 -> 1 -> 2 with total weight 1.0 + 1.0 = 2.0
+    // or 0 -> 2 with weight 3.0
+    EXPECT_EQ(route.total_weight, 2.0);
+}
+
+TEST(CHQuery, SimpleQueryInvalidSource)
+{
+    CHGraph::Graph g = make_simple_graph();
+    CHGraph::PreprocGraph p;
+    CHGraph::preproc_graph_top_down(g, p);
+
+    CHGraph::Destination dest{.source = -1, .target = 1};
+    CHGraph::Route route;
+    CHGraph::query_route(g, p, dest, route);
+
+    EXPECT_TRUE(std::isinf(route.total_weight));
+}
+
+TEST(CHQuery, SimpleQueryInvalidTarget)
+{
+    CHGraph::Graph g = make_simple_graph();
+    CHGraph::PreprocGraph p;
+    CHGraph::preproc_graph_top_down(g, p);
+
+    CHGraph::Destination dest{.source = 0, .target = 10};
+    CHGraph::Route route;
+    CHGraph::query_route(g, p, dest, route);
+
+    EXPECT_TRUE(std::isinf(route.total_weight));
 }
