@@ -16,6 +16,11 @@ constexpr char COMMENT_SYMBOL = 'c';
 constexpr char GRAPH_SUMMARY_SYMBOL = 'p';
 constexpr char EDGE_SYMBOL = 'a';
 
+
+constexpr std::string CSV_NEW_LINE_SYMBOL = "\n";
+constexpr std::string CSV_NEW_COLUMN_SYMBOL = ";";
+
+
 void FileFacilities::read_graph(const std::string &graph_file, CHGraph::Graph &graph)
 {
     std::ifstream file(graph_file);
@@ -95,10 +100,13 @@ void FileFacilities::read_graph(const std::string &graph_file, CHGraph::Graph &g
                 double weight;
                 string_stream >> node_from >> node_to >> weight;
                 
-                if (string_stream.fail() || node_from < 0 || node_number <= node_from || node_to < 0 || node_number <= node_to || weight < 0)
+                if (string_stream.fail() || (node_from <= 0 || node_number < node_from) || (node_to <= 0 || node_number < node_to) || weight < 0)
                 {
                     throw std::runtime_error("Incorrect edge format on line " + std::to_string(line_number) + " in graph file " + graph_file);
                 }
+
+                node_from -= 1;
+                node_to -= 1;
 
                 edge_map[node_from].emplace_back(node_to, weight);
                 ++actual_edge_number;
@@ -216,7 +224,7 @@ void FileFacilities::dump_measurement(const Measurement &measurement, const std:
 
     for (const std::string &key: keys)
     {
-        file << key << ";";
+        file << key << CSV_NEW_COLUMN_SYMBOL;
 
         if (measurement.data.at(key).size() > max_size)
         {
@@ -224,7 +232,7 @@ void FileFacilities::dump_measurement(const Measurement &measurement, const std:
         }
     }
 
-    file << "\n";
+    file << CSV_NEW_LINE_SYMBOL;
 
     for (int ind = 0; ind < max_size; ++ind)
     {
@@ -235,10 +243,10 @@ void FileFacilities::dump_measurement(const Measurement &measurement, const std:
                 file << measurement.data.at(key)[ind];
             }
 
-            file << ";";
+            file << CSV_NEW_COLUMN_SYMBOL;
         }
 
-        file << "\n";
+        file << CSV_NEW_LINE_SYMBOL;
     }
 
     file.close();
