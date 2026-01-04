@@ -9,10 +9,9 @@ namespace CHGraph
     struct Graph
     {
         std::vector<int> first_out;
+        std::vector<int> from;
         std::vector<int> to;
         std::vector<double> weights;
-
-        int num_nodes = 0;
     };
 
     struct CHArc {
