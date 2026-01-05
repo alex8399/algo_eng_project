@@ -1,0 +1,5 @@
+c comment for checking
+p sp 3 4
+a 2 1 0.5
+a 1 2 1.23
+a 2 3 45
