@@ -54,7 +54,7 @@ void FileFacilities::read_graph(const std::string &graph_file, CHGraph::Graph &g
                 
                 if (string_stream.fail() || sp_symbols != "sp" || node_number < 0 || edge_number < 0)
                 {
-                    throw std::runtime_error("Incorrect summary line on line " + std::to_string(line_number) + " in graph file " + graph_file);
+                    throw std::runtime_error("Incorrect summary format on line " + std::to_string(line_number) + " in graph file " + graph_file);
                 }
 
                 summary_read = true;
@@ -182,10 +182,13 @@ void FileFacilities::read_destinations(const std::string &destinations_file, std
                 int node_from, node_to;
                 string_stream >> node_from >> node_to;
                 
-                if (string_stream.fail() || node_from < 0 || node_to < 0)
+                if (string_stream.fail() || node_from <= 0 || node_to <= 0)
                 {
                     throw std::runtime_error("Incorrect destination format on line " + std::to_string(line_number) + " in destinations file " + destinations_file);
                 }
+
+                node_from -= 1;
+                node_to -= 1;
 
                 CHGraph::Destination destination{.source = node_from, .target = node_to};
                 destinations.push_back(destination);
