@@ -22,7 +22,7 @@ TEST(CHPreprocessing, ForwardGraphIsUpward)
     CHGraph::Graph g = make_simple_graph();
     CHGraph::PreprocGraph p;
 
-    CHGraph::preproc_graph_top_down(g, p);
+    CHGraph::preproc_graph_bottom_up(g, p);
 
     const int n = static_cast<int>(p.forward_first_out.size()) - 1;
 
@@ -42,7 +42,7 @@ TEST(CHPreprocessing, BackwardGraphMatchesDownwardDefinition)
 {
     CHGraph::Graph g = make_simple_graph();
     CHGraph::PreprocGraph p;
-    CHGraph::preproc_graph_top_down(g, p);
+    CHGraph::preproc_graph_bottom_up(g, p);
 
     for (const auto &arc : p.backward_arcs)
         EXPECT_LT(p.ranks[arc.from], p.ranks[arc.to]);
@@ -55,7 +55,7 @@ TEST(CHPreprocessing, ShortcutIsAdded)
     CHGraph::Graph g = make_simple_graph();
     CHGraph::PreprocGraph p;
 
-    CHGraph::preproc_graph_top_down(g, p);
+    CHGraph::preproc_graph_bottom_up(g, p);
 
     bool found_shortcut = false;
     for (const auto &arc : p.forward_arcs)
@@ -78,7 +78,7 @@ TEST(CHPreprocessing, RanksArePermutation)
     CHGraph::Graph g = make_simple_graph();
     CHGraph::PreprocGraph p;
 
-    CHGraph::preproc_graph_top_down(g, p);
+    CHGraph::preproc_graph_bottom_up(g, p);
 
     const int n = (int)p.ranks.size();
     ASSERT_EQ(n, (int)g.first_out.size() - 1);
@@ -94,18 +94,6 @@ TEST(CHPreprocessing, RanksArePermutation)
         EXPECT_EQ(seen[i], 1);
 }
 
-
-
-
-TEST(TestCaategory1, Test1) {
-    CHGraph::Graph graph;
-    CHGraph::PreprocGraph preproc_graph;
-    CHGraph::preproc_graph_bottom_up(graph, preproc_graph);
-    CHGraph::preproc_graph_bottom_up(graph, preproc_graph);
-    EXPECT_EQ(3+2, 5);
-    EXPECT_TRUE(true);
-}
-
 //testing ranking nodes using heuristic
 
 TEST(CHPreprocessing, ShortcutCountIsReasonable)
@@ -113,7 +101,7 @@ TEST(CHPreprocessing, ShortcutCountIsReasonable)
     CHGraph::Graph g = make_simple_graph();
     CHGraph::PreprocGraph p;
 
-    CHGraph::preproc_graph_top_down(g, p);
+    CHGraph::preproc_graph_bottom_up(g, p);
 
     int shortcut_count = 0;
     for (const auto &arc : p.forward_arcs)
@@ -128,7 +116,7 @@ TEST(CHPreprocessing, AllNodesAreRankedExactlyOnce)
     CHGraph::Graph g = make_simple_graph();
     CHGraph::PreprocGraph p;
 
-    CHGraph::preproc_graph_top_down(g, p);
+    CHGraph::preproc_graph_bottom_up(g, p);
 
     const int n = static_cast<int>(g.first_out.size()) - 1;
 
