@@ -2,7 +2,57 @@
 #include "ch_graph.hpp"
 #include "file_facilities.hpp"
 #include <cmath>
+#include <queue>
+#include <limits>
 
+
+// Dijkstra implementation for validation
+static double dijkstra_shortest_path(const CHGraph::Graph &graph, int source, int target)
+{
+    const int n = graph.first_out.size() - 1;
+    
+    if (source < 0 || source >= n || target < 0 || target >= n)
+        return std::numeric_limits<double>::infinity();
+    
+    if (source == target)
+        return 0.0;
+    
+    const double INF = std::numeric_limits<double>::infinity();
+    std::vector<double> dist(n, INF);
+    
+    using QItem = std::pair<double, int>;
+    std::priority_queue<QItem, std::vector<QItem>, std::greater<QItem>> pq;
+    
+    dist[source] = 0.0;
+    pq.push(QItem(0.0, source));
+    
+    while (!pq.empty())
+    {
+        auto [d, u] = pq.top();
+        pq.pop();
+        
+        if (d > dist[u])
+            continue;
+        
+        if (u == target)
+            return dist[target];
+        
+        for (int e = graph.first_out[u]; e < graph.first_out[u + 1]; ++e)
+        {
+            int v = graph.to[e];
+            double w = graph.weights[e];
+            double new_dist = d + w;
+            
+            if (new_dist < dist[v])
+            {
+                dist[v] = new_dist;
+                pq.push(QItem(new_dist, v));
+            }
+        }
+    }
+    
+    return dist[target];
+}
 
 
 // simple test graph to be used for test
@@ -230,4 +280,83 @@ TEST(CHQuery, SimpleQueryInvalidTarget)
     CHGraph::query_route(g, p, dest, route);
 
     EXPECT_TRUE(std::isinf(route.total_weight));
+}
+
+
+TEST(CHQueryLargeGraph, AllQueriesMatchSolutions)
+{
+    CHGraph::Graph graph;
+    CHGraph::PreprocGraph preproc_graph;
+    std::vector<CHGraph::Destination> destinations;
+    std::vector<CHGraph::Solution> solutions;
+
+    // Read graph, destinations and solutions
+    FileFacilities::read_graph("tst/graphs/rome99.gr", graph);
+    FileFacilities::read_destinations("tst/destinations/d_rome99.txt", destinations);
+    FileFacilities::read_solutions("tst/graph_solutions/formatted_rome99.txt", solutions);
+
+    // Preprocess the graph
+    CHGraph::preproc_graph_top_down(graph, preproc_graph);
+
+    // Verify we have matching number of destinations and solutions
+    ASSERT_EQ(destinations.size(), solutions.size());
+
+    // Test each query
+    int mismatches = 0;
+
+    for (size_t i = 0; i < destinations.size(); ++i)
+    {
+        CHGraph::Route route;
+        CHGraph::query_route(graph, preproc_graph, destinations[i], route);
+
+        double expected = solutions[i].expected_weight;
+        double actual = route.total_weight;
+        double error = std::abs(expected - actual);
+
+        if (error > 0)
+        {
+            ++mismatches;
+        }
+    }
+
+    EXPECT_EQ(mismatches, 0) << "Found " << mismatches;
+}
+
+TEST(CHQueryLargeGraph, CHMatchesDijkstra)
+{
+    CHGraph::Graph graph;
+    CHGraph::PreprocGraph preproc_graph;
+    std::vector<CHGraph::Destination> destinations;
+
+    // Read rome99 graph and destinations
+    FileFacilities::read_graph("tst/graphs/rome99.gr", graph);
+    FileFacilities::read_destinations("tst/destinations/d_rome99.txt", destinations);
+
+    // Preprocess the graph for CH
+    CHGraph::preproc_graph_top_down(graph, preproc_graph);
+
+    // Test each query: compare CH query with Dijkstra
+    int mismatches = 0;
+
+
+    for (size_t i = 0; i < destinations.size(); ++i)
+    {
+        // Run  Dijkstra
+        double dijkstra_dist = dijkstra_shortest_path(graph, destinations[i].source, destinations[i].target);
+        
+        // Run CH query
+        CHGraph::Route route;
+        CHGraph::query_route(graph, preproc_graph, destinations[i], route);
+        double ch_dist = route.total_weight;
+
+        // Compare results
+        double error = std::abs(dijkstra_dist - ch_dist);
+        
+        if (error > 0) 
+        {
+            ++mismatches;
+        }
+    }
+
+    EXPECT_EQ(mismatches, 0);
 }

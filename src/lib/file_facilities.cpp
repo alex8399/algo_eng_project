@@ -126,21 +126,17 @@ void FileFacilities::read_graph(const std::string &graph_file, CHGraph::Graph &g
         throw std::runtime_error("Actual number of edges and number of edges from summary line are not equal in graph file " + graph_file);
     }
 
-    graph.first_out.reserve(node_number);
+    graph.first_out.reserve(node_number + 1);
     graph.from.reserve(edge_number);
     graph.to.reserve(edge_number);
     graph.weights.reserve(edge_number);
 
     for (int node_from = 0; node_from < node_number; ++node_from)
     {
-        if (edge_map.find(node_from) == edge_map.end())
+        graph.first_out.push_back(graph.from.size());
+        
+        if (edge_map.find(node_from) != edge_map.end())
         {
-            graph.first_out.push_back(edge_number + 1);
-        }
-        else
-        {
-            graph.first_out.push_back(graph.from.size());
-            
             for (auto &edge_pair: edge_map[node_from])
             {
                 graph.from.push_back(node_from);
@@ -149,6 +145,9 @@ void FileFacilities::read_graph(const std::string &graph_file, CHGraph::Graph &g
             }
         }
     }
+    
+    // Add sentinel entry for first_out[n]
+    graph.first_out.push_back(graph.from.size());
 
     file.close();
 }
@@ -194,6 +193,57 @@ void FileFacilities::read_destinations(const std::string &destinations_file, std
             default:
             {
                 throw std::runtime_error("Incorrect format on line " + std::to_string(line_number) + " in destinations file " + destinations_file);
+            }
+        }
+
+        ++line_number;
+    }
+
+    file.close();
+}
+
+void FileFacilities::read_solutions(const std::string &solutions_file, std::vector<CHGraph::Solution> &solutions)
+{
+    std::ifstream file(solutions_file);
+    std::string line;
+
+    if (!file.is_open())
+    {
+        throw std::runtime_error("Can not open solutions file " + solutions_file);
+    }
+
+    int line_number = 1;
+    
+    while (std::getline(file, line))
+    {
+        std::istringstream string_stream(line);
+        char symbol;
+        string_stream >> symbol;
+
+        switch (symbol)
+        {
+            case COMMENT_SYMBOL:
+            {
+                break;
+            }
+            case DESTINATION_SYMBOL:
+            {
+                int node_from, node_to;
+                double weight;
+                string_stream >> node_from >> node_to >> weight;
+                
+                if (string_stream.fail() || node_from < 0 || node_to < 0 || weight < 0)
+                {
+                    throw std::runtime_error("Incorrect solution format on line " + std::to_string(line_number) + " in solutions file " + solutions_file);
+                }
+
+                CHGraph::Solution solution{.source = node_from, .target = node_to, .expected_weight = weight};
+                solutions.push_back(solution);
+                break;
+            }
+            default:
+            {
+                throw std::runtime_error("Incorrect format on line " + std::to_string(line_number) + " in solutions file " + solutions_file);
             }
         }
 

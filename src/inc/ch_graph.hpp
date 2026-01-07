@@ -50,6 +50,15 @@ namespace CHGraph
         int target = -1;
     };
 
+    //Struct for storing shortest path solution from source to destination 
+    //Used when reading from a file shortest path solutions for a given graph
+    struct Solution  
+    {
+        int source = -1;
+        int target = -1;
+        double expected_weight = 0.0;
+    };
+
     void preproc_graph_bottom_up(const Graph &graph, PreprocGraph &preproc_graph);
 
     void preproc_graph_top_down(const Graph &graph, PreprocGraph &preproc_graph);
