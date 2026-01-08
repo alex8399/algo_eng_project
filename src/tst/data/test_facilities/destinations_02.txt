@@ -1,9 +1,9 @@
 c This is test file 1
-d 455 66
-d 224 25
+d 454 65
+d 223 24
 c Another comment for testing
-d 2 11
-d 4 57
-d 35 100
+d 1 10
+d 3 56
+d 34 99
 c Another comment
-d 6 6
+d 5 5

@@ -10,6 +10,7 @@ OBJS = \
 	${BLD_DIR}/ch_graph.o \
 	${BLD_DIR}/experiment.o \
 	${BLD_DIR}/file_facilities.o \
+	${BLD_DIR}/query.o \
 	${BLD_DIR}/timer.o
 OBJ_MAIN = ${BLD_DIR}/main.o
 

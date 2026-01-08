@@ -132,7 +132,7 @@ static void expect_equal_graphs(const CHGraph::Graph &graph1, const CHGraph::Gra
 TEST(ReadGraphFileTests, SuccessfulRetrieving01)
 {
     const CHGraph::Graph expected_graph = {
-        .first_out =    {0, 3, 6, 6},
+        .first_out =    {0, 3, 5, 5, 5},
         .from =         {0,     0,      0,      1,      1},
         .to =           {1,     2,      3,      2,      3},
         .weights =      {1.5,   2.5,    3.5,    4.5,    5.5},
@@ -149,7 +149,7 @@ TEST(ReadGraphFileTests, SuccessfulRetrieving01)
 TEST(ReadGraphFileTests, SuccessfulRetrieving02)
 {
     const CHGraph::Graph expected_graph = {
-        .first_out =    {0, 4, 9, 5, 7},
+        .first_out =    {0, 4, 5, 5, 7, 8},
         .from =         {0,     0,      0,      0,      1,      3,      3,      4},
         .to =           {2,     4,      1,      3,      4,      4,      0,      1},
         .weights =      {1.23,  45.0,   0.3,    0.0,    0.5,    45.8,   0.0,    23.5},
@@ -166,7 +166,7 @@ TEST(ReadGraphFileTests, SuccessfulRetrieving02)
 TEST(ReadGraphFileTests, SuccessfulRetrieving03)
 {
     const CHGraph::Graph expected_graph = {
-        .first_out =    {0, 1, 6, 7, 8, 11, 11, 9},
+        .first_out =    {0, 1, 6, 7, 8, 9, 9, 9, 10},
         .from =         {0,     1,      1,      1,      1,      1,      2,          3,      4,      7},
         .to =           {1,     0,      7,      4,      3,      2,      1,          1,      1,      1},
         .weights =      {1.23,  0.5,    45.0,   0.3,    0.0,    45.5,   767.52,     23.5,   0.0,    45.8},
@@ -282,4 +282,77 @@ TEST(DumpMeasurementTests, SuccessfulWriting02)
     EXPECT_NO_THROW(FileFacilities::dump_measurement(measurement, dump_measurement_path));
 
     expect_equal_text_files(dump_measurement_path, expected_dump_measurement);
+}
+
+// Tests for read_solutions
+TEST(ReadSolutionsTests, SuccessfulRetrieving)
+{
+    const std::vector<CHGraph::Solution> expected_solutions = {
+        CHGraph::Solution{.source = 1, .target = 10, .expected_weight = 123.5},
+        CHGraph::Solution{.source = 2, .target = 20, .expected_weight = 456.7},
+        CHGraph::Solution{.source = 89, .target = 56, .expected_weight = 789.0}
+    };
+
+    std::vector<CHGraph::Solution> solutions;
+    const std::string solutions_file_path = "tst/data/test_facilities/solutions_01.txt";
+
+    EXPECT_NO_THROW(FileFacilities::read_solutions(solutions_file_path, solutions));
+
+    ASSERT_EQ(solutions.size(), expected_solutions.size());
+    for (size_t i = 0; i < solutions.size(); ++i)
+    {
+        EXPECT_EQ(solutions[i].source, expected_solutions[i].source);
+        EXPECT_EQ(solutions[i].target, expected_solutions[i].target);
+        EXPECT_EQ(solutions[i].expected_weight, expected_solutions[i].expected_weight);
+    }
+}
+
+TEST(ReadSolutionsTests, EmptyFile)
+{
+    std::vector<CHGraph::Solution> solutions;
+    const std::string solutions_file_path = "tst/data/test_facilities/solutions_empty.txt";
+
+    EXPECT_NO_THROW(FileFacilities::read_solutions(solutions_file_path, solutions));
+    EXPECT_EQ(solutions.size(), 0);
+}
+
+TEST(ReadSolutionsTests, FileNotExist)
+{
+    std::vector<CHGraph::Solution> solutions;
+    const std::string solutions_file_path = "tst/data/test_facilities/non_existing_solutions.txt";
+
+    EXPECT_THROW(FileFacilities::read_solutions(solutions_file_path, solutions), std::runtime_error);
+}
+
+TEST(ReadSolutionsTests, NegativeWeight)
+{
+    std::vector<CHGraph::Solution> solutions;
+    const std::string solutions_file_path = "tst/data/test_facilities/solutions_negative.txt";
+
+    EXPECT_THROW(FileFacilities::read_solutions(solutions_file_path, solutions), std::runtime_error);
+}
+
+TEST(ReadSolutionsTests, MissingWeight)
+{
+    std::vector<CHGraph::Solution> solutions;
+    const std::string solutions_file_path = "tst/data/test_facilities/solutions_missing_weight.txt";
+
+    EXPECT_THROW(FileFacilities::read_solutions(solutions_file_path, solutions), std::runtime_error);
+}
+
+TEST(ReadSolutionsTests, WithComments)
+{
+    const std::vector<CHGraph::Solution> expected_solutions = {
+        CHGraph::Solution{.source = 5, .target = 15, .expected_weight = 100.0}
+    };
+
+    std::vector<CHGraph::Solution> solutions;
+    const std::string solutions_file_path = "tst/data/test_facilities/solutions_comments.txt";
+
+    EXPECT_NO_THROW(FileFacilities::read_solutions(solutions_file_path, solutions));
+
+    ASSERT_EQ(solutions.size(), expected_solutions.size());
+    EXPECT_EQ(solutions[0].source, expected_solutions[0].source);
+    EXPECT_EQ(solutions[0].target, expected_solutions[0].target);
+    EXPECT_EQ(solutions[0].expected_weight, expected_solutions[0].expected_weight);
 }

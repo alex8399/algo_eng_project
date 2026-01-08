@@ -12,6 +12,8 @@ namespace FileFacilities
 
     void read_destinations(const std::string &destinations_file, std::vector<CHGraph::Destination> &destinations);
 
+    void read_solutions(const std::string &solutions_file, std::vector<CHGraph::Solution> &solutions);
+
     void dump_measurement(const Measurement &measurement, const std::string &output_file);
 }
 

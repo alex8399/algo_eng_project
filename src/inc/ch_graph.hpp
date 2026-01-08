@@ -32,8 +32,8 @@ namespace CHGraph
         std::vector<int> forward_first_out;  
         std::vector<CHArc>   forward_arcs;
 
-        // -------- Backward graph (reversed upward edges) --------
-        // contains edges v -> u for each upward edge u -> v
+        // -------- Backward graph (Reverse of Downward Graph) --------
+        // contains edges v -> u for each edge (original or shortcut) u -> v with ranks[u] > ranks[v]"
         std::vector<int> backward_first_out;
         std::vector<CHArc>   backward_arcs;
     };
@@ -50,25 +50,24 @@ namespace CHGraph
         int target = -1;
     };
 
-
-bool stall_forward(int v,
-                   const std::vector<double>& dist_f,
-                   const PreprocGraph& preproc_graph);
-
-bool stall_backward(int v,
-                    const std::vector<double>& dist_b,
-                    const PreprocGraph& preproc_graph);
-
-
-
+    //Struct for storing shortest path solution from source to destination 
+    //Used when reading from a file shortest path solutions for a given graph
+    struct Solution  
+    {
+        int source = -1;
+        int target = -1;
+        double expected_weight = 0.0;
+    };
 
     void preproc_graph_bottom_up(const Graph &graph, PreprocGraph &preproc_graph);
 
     void preproc_graph_top_down(const Graph &graph, PreprocGraph &preproc_graph);
 
-
-    void query_route(const CHGraph::Graph &graph, const PreprocGraph &preproc_graph,
-                     const Destination &destination, Route &route);
+    // Helper functions query
+    bool stall_forward(int v, const std::vector<double>& dist_f, const PreprocGraph& preproc_graph);
+    bool stall_backward(int v, const std::vector<double>& dist_b, const PreprocGraph& preproc_graph);
+   
+    void query_route(const CHGraph::Graph &graph, const PreprocGraph &preproc_graph, const Destination &destination, Route &route);
     
     static bool witness_search(const std::vector<std::vector<std::pair<int,double>>>& adj,int source,
                         int target, int forbidden, double max_dist, const std::vector<int>& contracted);
@@ -76,7 +75,5 @@ bool stall_backward(int v,
     static double importance(int v, const std::vector<std::vector<std::pair<int,double>>>& adj,
                       const std::vector<int>& contracted);
 }
-
-
 
 #endif 
