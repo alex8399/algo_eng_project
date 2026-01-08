@@ -17,8 +17,8 @@ constexpr char GRAPH_SUMMARY_SYMBOL = 'p';
 constexpr char EDGE_SYMBOL = 'a';
 
 
-constexpr std::string CSV_NEW_LINE_SYMBOL = "\n";
-constexpr std::string CSV_NEW_COLUMN_SYMBOL = ";";
+const std::string CSV_NEW_LINE_SYMBOL = "\n";
+const std::string CSV_NEW_COLUMN_SYMBOL = ";";
 
 
 void FileFacilities::read_graph(const std::string &graph_file, CHGraph::Graph &graph)

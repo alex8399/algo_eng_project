@@ -68,6 +68,12 @@ namespace CHGraph
     bool stall_backward(int v, const std::vector<double>& dist_b, const PreprocGraph& preproc_graph);
    
     void query_route(const CHGraph::Graph &graph, const PreprocGraph &preproc_graph, const Destination &destination, Route &route);
+    
+    static bool witness_search(const std::vector<std::vector<std::pair<int,double>>>& adj,int source,
+                        int target, int forbidden, double max_dist, const std::vector<int>& contracted);
+    
+    static double importance(int v, const std::vector<std::vector<std::pair<int,double>>>& adj,
+                      const std::vector<int>& contracted);
 }
 
 #endif 

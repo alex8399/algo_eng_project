@@ -8,11 +8,278 @@
 #include <cstddef>
 #include <algorithm>
 
-
-
-void CHGraph::preproc_graph_bottom_up(const CHGraph::Graph &graph, CHGraph::PreprocGraph &preproc_graph)
-{
+double CHGraph::importance(
+    int v,
+    const std::vector<std::vector<std::pair<int,double>>>& adj,
+    const std::vector<int>& contracted
+) {
+    int deg = 0;
+    for (auto& [u, _] : adj[v]) {
+        if (!contracted[u]) deg++;
+    }
+    return deg * deg + deg;
 }
+
+bool CHGraph::witness_search(
+    const std::vector<std::vector<std::pair<int,double>>>& adj,
+    int source,
+    int target,
+    int forbidden,
+    double max_dist,
+    const std::vector<int>& contracted
+) {
+    const double INF = std::numeric_limits<double>::infinity();
+    int n = adj.size();
+
+    std::vector<double> dist(n, INF);
+
+    typedef std::pair<double, int> QItem;
+    std::priority_queue<QItem, std::vector<QItem>, std::greater<QItem>> pq;
+
+    dist[source] = 0.0;
+    pq.emplace(0.0, source);
+
+    while (!pq.empty()) {
+        auto [d, u] = pq.top();
+        pq.pop();
+
+        // bound reached, so no need to continue
+        if (d > max_dist) return false;
+
+        // target found
+        if (u == target) return true;
+
+        if (d != dist[u]) continue;
+
+        for (auto& [v, w] : adj[u]) {
+            // forbid node v (the contracted node)
+            if (v == forbidden) continue;
+
+            // skip already contracted nodes
+            if (contracted[v]) continue;
+
+            double nd = d + w;
+
+            if (nd < dist[v] && nd <= max_dist) {
+                dist[v] = nd;
+                pq.emplace(nd, v);
+            }
+        }
+    }
+
+    return false; // no path found <= max_dist
+}
+
+void CHGraph::preproc_graph_bottom_up(
+    const CHGraph::Graph &graph,
+    CHGraph::PreprocGraph &preproc_graph
+) {
+    const int n = graph.first_out.size() - 1;
+
+    // Build directed adjacency lists
+
+    struct Edge {
+        int to;
+        double weight;
+    };
+    // out_adj[u]: all edges u -> v
+    // in_adj[v]:  all edges v -> w
+    std::vector<std::vector<Edge>> out_adj(n), in_adj(n);
+
+    for (int u = 0; u < n; ++u) {
+        for (int e = graph.first_out[u]; e < graph.first_out[u + 1]; ++e) {
+            int v = graph.to[e];
+            double w = graph.weights[e];
+            out_adj[u].push_back({v, w});
+            in_adj[v].push_back({u, w});
+        }
+    }
+
+    // Bookkeeping arrays
+
+    std::vector<int> contracted(n, 0);   // 1 if node already contracted
+    std::vector<int> rank(n, -1);        // contraction order
+    int current_rank = 0;
+
+    std::vector<CHArc> all_arcs;          // original edges + shortcuts
+
+    // importance function per node
+
+    auto importance = [&](int v) {
+        int in_deg = 0, out_deg = 0;
+
+        // count active incoming edges
+        for (auto &e : in_adj[v])
+            if (!contracted[e.to])
+                in_deg++;
+
+        // count active outgoing edges
+        for (auto &e : out_adj[v])
+            if (!contracted[e.to])
+                out_deg++;
+
+        return in_deg * out_deg + out_deg;
+    };
+
+    // priority queue with lazy recomputation of importance
+
+    using QItem = std::pair<int, int>; // (importance, node)
+    std::priority_queue<QItem, std::vector<QItem>, std::greater<QItem>> pq;
+
+    for (int v = 0; v < n; ++v)
+        pq.emplace(importance(v), v);
+
+    // witness search
+
+    auto witness_search = [&](int source, int target, int forbidden, double max_dist) {
+        const double INF = std::numeric_limits<double>::infinity();
+        std::vector<double> dist(n, INF);
+
+        using DItem = std::pair<double, int>;
+        std::priority_queue<DItem, std::vector<DItem>, std::greater<DItem>> pqw;
+
+        dist[source] = 0.0;
+        pqw.emplace(0.0, source);
+
+        while (!pqw.empty()) {
+            auto [d, u] = pqw.top();
+            pqw.pop();
+
+            if (d > max_dist)
+                return false;
+
+            if (u == target)
+                return true;
+
+            if (d != dist[u])
+                continue;
+
+            for (auto &e : out_adj[u]) {
+                int v = e.to;
+                if (v == forbidden || contracted[v])
+                    continue;
+
+                double nd = d + e.weight;
+                if (nd < dist[v] && nd <= max_dist) {
+                    dist[v] = nd;
+                    pqw.emplace(nd, v);
+                }
+            }
+        }
+        return false;
+    };
+
+    // contraction loop
+
+    while (!pq.empty()) {
+        auto [old_imp, v] = pq.top();
+        pq.pop();
+
+        if (contracted[v])
+            continue;
+
+        // lazy recomputation (only update importance when you pop a node, if the new imporance is bigger than the old one)
+        int new_imp = importance(v);
+        if (new_imp > old_imp) {
+            pq.emplace(new_imp, v);
+            continue;
+        }
+
+        // collect in and out edges
+
+        std::vector<Edge> incoming, outgoing;
+
+        for (auto &e : in_adj[v])
+            if (!contracted[e.to])
+                incoming.push_back(e);
+
+        for (auto &e : out_adj[v])
+            if (!contracted[e.to])
+                outgoing.push_back(e);
+
+        //try shortcuts for u->v->w
+
+        for (auto &in_e : incoming) {
+            int u = in_e.to;
+            double w_uv = in_e.weight;
+
+            for (auto &out_e : outgoing) {
+                int w = out_e.to;
+                double w_vw = out_e.weight;
+
+                if (u == w)
+                    continue;
+
+                double shortcut_weight = w_uv + w_vw;
+
+                // if there is a witness u->w then create shortcut
+                if (!witness_search(u, w, v, shortcut_weight)) {
+                    out_adj[u].push_back({w, shortcut_weight});
+                    in_adj[w].push_back({u, shortcut_weight});
+
+                    all_arcs.push_back(CHArc{u, w, shortcut_weight, v});
+                }
+            }
+        }
+
+        // contract v
+
+        contracted[v] = 1;
+        rank[v] = current_rank++;
+
+        // neighbours change importance 
+        for (auto &e : in_adj[v])
+            if (!contracted[e.to])
+                pq.emplace(importance(e.to), e.to);
+
+        for (auto &e : out_adj[v])
+            if (!contracted[e.to])
+                pq.emplace(importance(e.to), e.to);
+    }
+
+    // add the original edges
+
+    for (int u = 0; u < n; ++u) {
+        for (int e = graph.first_out[u]; e < graph.first_out[u + 1]; ++e) {
+            int v = graph.to[e];
+            double w = graph.weights[e];
+            all_arcs.push_back(CHArc{u, v, w, -1});
+        }
+    }
+
+    // build the forward and backward graphs
+    preproc_graph.ranks = rank;
+
+    preproc_graph.forward_first_out.assign(n + 1, 0);
+    preproc_graph.backward_first_out.assign(n + 1, 0);
+
+    for (auto &a : all_arcs) {
+        if (rank[a.from] < rank[a.to])
+            preproc_graph.forward_first_out[a.from + 1]++;
+        else if (rank[a.from] > rank[a.to])
+            preproc_graph.backward_first_out[a.to + 1]++;
+    }
+
+    for (int i = 0; i < n; ++i) {
+        preproc_graph.forward_first_out[i + 1] += preproc_graph.forward_first_out[i];
+        preproc_graph.backward_first_out[i + 1] += preproc_graph.backward_first_out[i];
+    }
+
+    preproc_graph.forward_arcs.resize(preproc_graph.forward_first_out[n]);
+    preproc_graph.backward_arcs.resize(preproc_graph.backward_first_out[n]);
+
+    std::vector<int> fpos = preproc_graph.forward_first_out;
+    std::vector<int> bpos = preproc_graph.backward_first_out;
+
+    for (auto &a : all_arcs) {
+        if (rank[a.from] < rank[a.to])
+            preproc_graph.forward_arcs[fpos[a.from]++] = a;
+        else if (rank[a.from] > rank[a.to])
+            preproc_graph.backward_arcs[bpos[a.to]++] =
+                CHArc{a.to, a.from, a.weight, a.mid_node};
+    }
+}
+
 
 static std::vector<int> rank_importance(const std::vector<std::vector<int>> &in_deg,
                 const std::vector<std::vector<int>> &out_deg)
@@ -329,8 +596,6 @@ void CHGraph::preproc_graph_top_down(const CHGraph::Graph &graph, CHGraph::Prepr
     }
 }
 
-
-
 void CHGraph::query_route(const CHGraph::Graph &graph, const CHGraph::PreprocGraph &preproc_graph, const CHGraph::Destination &destination, CHGraph::Route &route)
 {
     route.nodes.clear();
@@ -456,3 +721,4 @@ void CHGraph::query_route(const CHGraph::Graph &graph, const CHGraph::PreprocGra
 
     route.total_weight = best_dist;
 }
+
