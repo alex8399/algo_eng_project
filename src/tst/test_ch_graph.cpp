@@ -302,8 +302,6 @@ TEST(CHQueryLargeGraph, AllQueriesMatchSolutions)
     ASSERT_EQ(destinations.size(), solutions.size());
 
     // Test each query
-    int mismatches = 0;
-
     for (size_t i = 0; i < destinations.size(); ++i)
     {
         CHGraph::Route route;
@@ -311,15 +309,9 @@ TEST(CHQueryLargeGraph, AllQueriesMatchSolutions)
 
         double expected = solutions[i].expected_weight;
         double actual = route.total_weight;
-        double error = std::abs(expected - actual);
 
-        if (error > 0)
-        {
-            ++mismatches;
-        }
+        EXPECT_EQ(expected,actual);
     }
-
-    EXPECT_EQ(mismatches, 0) << "Found " << mismatches;
 }
 
 TEST(CHQueryLargeGraph, CHMatchesDijkstra)
@@ -336,8 +328,6 @@ TEST(CHQueryLargeGraph, CHMatchesDijkstra)
     CHGraph::preproc_graph_top_down(graph, preproc_graph);
 
     // Test each query: compare CH query with Dijkstra
-    int mismatches = 0;
-
 
     for (size_t i = 0; i < destinations.size(); ++i)
     {
@@ -350,13 +340,38 @@ TEST(CHQueryLargeGraph, CHMatchesDijkstra)
         double ch_dist = route.total_weight;
 
         // Compare results
-        double error = std::abs(dijkstra_dist - ch_dist);
-        
-        if (error > 0) 
-        {
-            ++mismatches;
-        }
+        EXPECT_EQ(dijkstra_dist,ch_dist);
+
     }
 
-    EXPECT_EQ(mismatches, 0);
+}
+
+TEST(CHQueryLargeGraph, GRAPH_5000_10000)
+{
+    CHGraph::Graph graph;
+    CHGraph::PreprocGraph preproc_graph;
+    std::vector<CHGraph::Destination> destinations;
+    std::vector<CHGraph::Solution> solutions;
+
+    // Read graph, destinations and solutions
+    FileFacilities::read_graph("tst/graphs/graph_5000_10000.gr", graph);
+    FileFacilities::read_destinations("tst/destinations/d_5000_100.txt", destinations);
+    FileFacilities::read_solutions("tst/graph_solutions/formatted_5000_10000.txt", solutions);
+
+    // Preprocess the graph
+    CHGraph::preproc_graph_top_down(graph, preproc_graph);
+
+    // Verify we have matching number of destinations and solutions
+    ASSERT_EQ(destinations.size(), solutions.size());
+
+    // Test each query
+    for (size_t i = 0; i < destinations.size(); ++i)
+    {
+        CHGraph::Route route;
+        CHGraph::query_route(graph, preproc_graph, destinations[i], route);
+
+        double expected = solutions[i].expected_weight;
+        double actual = route.total_weight;
+        EXPECT_EQ(expected,actual);
+    }
 }
