@@ -29,45 +29,53 @@ bool CHGraph::witness_search(
     const std::vector<int>& contracted
 ) {
     const double INF = std::numeric_limits<double>::infinity();
-    int n = adj.size();
+    const int n = adj.size();
 
-    std::vector<double> dist(n, INF);
+    static std::vector<double> dist;
+    static std::vector<int> touched;
 
-    typedef std::pair<double, int> QItem;
+    if ((int)dist.size() < n)
+        dist.assign(n, INF);
+
+    auto reset = [&]() {
+        for (int v : touched) dist[v] = INF;
+        touched.clear();
+    };
+
+    reset();
+
+    using QItem = std::pair<double,int>;
     std::priority_queue<QItem, std::vector<QItem>, std::greater<QItem>> pq;
 
     dist[source] = 0.0;
+    touched.push_back(source);
     pq.emplace(0.0, source);
 
     while (!pq.empty()) {
         auto [d, u] = pq.top();
         pq.pop();
 
-        // bound reached, so no need to continue
-        if (d > max_dist) return false;
+        if (d > max_dist)
+            break;  // ✅ CORRECT: stop expanding, not return false
 
-        // target found
-        if (u == target) return true;
+        if (u == target)
+            return true;
 
         if (d != dist[u]) continue;
 
-        for (auto& [v, w] : adj[u]) {
-            // forbid node v (the contracted node)
-            if (v == forbidden) continue;
+        for (auto &[v, w] : adj[u]) {
+            if (v == forbidden || contracted[v]) continue;
 
-            // skip already contracted nodes
-            if (contracted[v]) continue;
-
-            double nd = d + w;
-
+            const double nd = d + w;
             if (nd < dist[v] && nd <= max_dist) {
+                if (dist[v] == INF)
+                    touched.push_back(v);
                 dist[v] = nd;
                 pq.emplace(nd, v);
             }
         }
     }
-
-    return false; // no path found <= max_dist
+    return false;
 }
 
 void CHGraph::preproc_graph_bottom_up(
@@ -214,10 +222,20 @@ void CHGraph::preproc_graph_bottom_up(
 
                 // if there is a witness u->w then create shortcut
                 if (!witness_search(u, w, v, shortcut_weight)) {
-                    out_adj[u].push_back({w, shortcut_weight});
-                    in_adj[w].push_back({u, shortcut_weight});
-
-                    all_arcs.push_back(CHArc{u, w, shortcut_weight, v});
+                    bool found = false;
+                    for (auto &e : out_adj[u]) {
+                        if (e.to == w) {
+                            found = true;
+                            if (shortcut_weight < e.weight)
+                                e.weight = shortcut_weight;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        out_adj[u].push_back({w, shortcut_weight});
+                        in_adj[w].push_back({u, shortcut_weight});
+                        all_arcs.push_back(CHArc{u, w, shortcut_weight, v});
+                    }
                 }
             }
         }

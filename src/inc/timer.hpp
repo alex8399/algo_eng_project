@@ -4,7 +4,7 @@
 #include <chrono>
 
 using TimerTime = long long;
-using ChronoTime = std::chrono::milliseconds;
+using ChronoTime = std::chrono::nanoseconds;
 
 class Timer
 {
