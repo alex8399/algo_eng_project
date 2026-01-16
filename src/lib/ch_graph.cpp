@@ -56,7 +56,7 @@ bool CHGraph::witness_search(
         pq.pop();
 
         if (d > max_dist)
-            break;  // ✅ CORRECT: stop expanding, not return false
+            break;  //stop expanding, not return false
 
         if (u == target)
             return true;
